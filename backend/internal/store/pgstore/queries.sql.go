@@ -15,7 +15,7 @@ const getRoom = `-- name: GetRoom :one
 SELECT
   "id", "theme"
 FROM rooms
-WHERE "id" = $1
+WHERE id = $1
 `
 
 func (q *Queries) GetRoom(ctx context.Context, id uuid.UUID) (Room, error) {
