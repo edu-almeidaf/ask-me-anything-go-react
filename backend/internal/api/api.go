@@ -371,4 +371,31 @@ func (h apiHandler) handleRemoveReactFromMessage(w http.ResponseWriter, r *http.
 	})
 }
 
-func (h apiHandler) handleMarkMessageAsAnswered(w http.ResponseWriter, r *http.Request) {}
+func (h apiHandler) handleMarkMessageAsAnswered(w http.ResponseWriter, r *http.Request) {
+	_, rawRoomId, _, ok := h.readRoom(w, r)
+	if !ok {
+		return
+	}
+
+	rawMessageId := chi.URLParam(r, "message_id")
+	messageId, err := uuid.Parse(rawMessageId)
+	if err != nil {
+		http.Error(w, "invalid message id", http.StatusBadRequest)
+		return
+	}
+
+	err = h.q.MarkMessageAsAnswered(r.Context(), messageId)
+	if err != nil {
+		slog.Error("Failed to mark message as answered", "error", err)
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	go h.notifyClients(Message{
+		Kind:   MessageKindMessageAnswered,
+		RoomId: rawRoomId,
+		Value: MessageMessageAnswered{
+			ID: rawMessageId,
+		},
+	})
+}
