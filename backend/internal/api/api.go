@@ -299,6 +299,41 @@ func (h apiHandler) handleGetRoomMessage(w http.ResponseWriter, r *http.Request)
 	sendJSON(w, message)
 }
 
-func (h apiHandler) handleReactToMessage(w http.ResponseWriter, r *http.Request)         {}
+func (h apiHandler) handleReactToMessage(w http.ResponseWriter, r *http.Request) {
+	_, rawRoomId, _, ok := h.readRoom(w, r)
+	if !ok {
+		return
+	}
+
+	rawMessageId := chi.URLParam(r, "message_id")
+	messageId, err := uuid.Parse(rawMessageId)
+	if err != nil {
+		http.Error(w, "invalid message id", http.StatusBadRequest)
+		return
+	}
+
+	count, err := h.q.ReactToMessage(r.Context(), messageId)
+	if err != nil {
+		slog.Error("Failed to react to message", "error", err)
+		http.Error(w, "something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	type response struct {
+		Count int64 `json:"count"`
+	}
+
+	sendJSON(w, response{Count: count})
+
+	go h.notifyClients(Message{
+		Kind:   MessageKindMessageReactionIncreased,
+		RoomId: rawRoomId,
+		Value: MessageMessageReactionIncreased{
+			ID:    rawMessageId,
+			Count: count,
+		},
+	})
+}
+
 func (h apiHandler) handleRemoveReactFromMessage(w http.ResponseWriter, r *http.Request) {}
 func (h apiHandler) handleMarkMessageAsAnswered(w http.ResponseWriter, r *http.Request)  {}
