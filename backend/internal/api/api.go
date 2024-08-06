@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -119,7 +120,33 @@ func (h apiHandler) handleSubscribe(w http.ResponseWriter, r *http.Request) {
 	h.mu.Unlock()
 }
 
-func (h apiHandler) handleCreateRoom(w http.ResponseWriter, r *http.Request)             {}
+func (h apiHandler) handleCreateRoom(w http.ResponseWriter, r *http.Request) {
+	type _body struct {
+		Theme string `json:"theme"`
+	}
+
+	var body _body
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "Invalid json", http.StatusBadRequest)
+		return
+	}
+
+	roomId, err := h.q.InsertRoom(r.Context(), body.Theme)
+	if err != nil {
+		slog.Error("Failed to insert room", "error", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	type response struct {
+		ID string `json:"id"`
+	}
+
+	data, _ := json.Marshal(response{ID: roomId.String()})
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(data)
+}
+
 func (h apiHandler) handleGetRooms(w http.ResponseWriter, r *http.Request)               {}
 func (h apiHandler) handleCreateRoomMessage(w http.ResponseWriter, r *http.Request)      {}
 func (h apiHandler) handleGetRoomMessages(w http.ResponseWriter, r *http.Request)        {}
