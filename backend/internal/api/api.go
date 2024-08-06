@@ -202,6 +202,15 @@ func (h apiHandler) handleGetRooms(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, rooms)
 }
 
+func (h apiHandler) handleGetRoom(w http.ResponseWriter, r *http.Request) {
+	room, _, _, ok := h.readRoom(w, r)
+	if !ok {
+		return
+	}
+
+	sendJSON(w, room)
+}
+
 func (h apiHandler) handleCreateRoomMessage(w http.ResponseWriter, r *http.Request) {
 	rawRoomId := chi.URLParam(r, "room_id")
 	roomId, err := uuid.Parse(rawRoomId)
@@ -255,7 +264,7 @@ func (h apiHandler) handleCreateRoomMessage(w http.ResponseWriter, r *http.Reque
 		},
 	})
 }
-func (h apiHandler) handleGetRoom(w http.ResponseWriter, r *http.Request)                {}
+
 func (h apiHandler) handleGetRoomMessages(w http.ResponseWriter, r *http.Request)        {}
 func (h apiHandler) handleGetRoomMessage(w http.ResponseWriter, r *http.Request)         {}
 func (h apiHandler) handleReactToMessage(w http.ResponseWriter, r *http.Request)         {}
