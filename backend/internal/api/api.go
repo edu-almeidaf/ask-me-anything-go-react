@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -12,9 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/jackc/pgx/v5"
 )
 
 type apiHandler struct {
@@ -212,21 +209,9 @@ func (h apiHandler) handleGetRoom(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h apiHandler) handleCreateRoomMessage(w http.ResponseWriter, r *http.Request) {
-	rawRoomId := chi.URLParam(r, "room_id")
-	roomId, err := uuid.Parse(rawRoomId)
-	if err != nil {
-		http.Error(w, "Invalid room id", http.StatusBadRequest)
-		return
-	}
 
-	_, err = h.q.GetRoom(r.Context(), roomId)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			http.Error(w, "Room not found", http.StatusNotFound)
-			return
-		}
-
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+	_, rawRoomId, roomId, ok := h.readRoom(w, r)
+	if !ok {
 		return
 	}
 
@@ -251,9 +236,7 @@ func (h apiHandler) handleCreateRoomMessage(w http.ResponseWriter, r *http.Reque
 		ID string `json:"id"`
 	}
 
-	data, _ := json.Marshal(response{ID: messageId.String()})
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(data)
+	sendJSON(w, response{ID: messageId.String()})
 
 	go h.notifyClients(Message{
 		Kind:   MessageKindMessageCreated,
@@ -265,7 +248,26 @@ func (h apiHandler) handleCreateRoomMessage(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-func (h apiHandler) handleGetRoomMessages(w http.ResponseWriter, r *http.Request)        {}
+func (h apiHandler) handleGetRoomMessages(w http.ResponseWriter, r *http.Request) {
+	_, _, roomId, ok := h.readRoom(w, r)
+	if !ok {
+		return
+	}
+
+	messages, err := h.q.GetRoomMessages(r.Context(), roomId)
+	if err != nil {
+		slog.Error("Failed to get messages", "error", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	if messages == nil {
+		messages = []pgstore.Message{}
+	}
+
+	sendJSON(w, messages)
+}
+
 func (h apiHandler) handleGetRoomMessage(w http.ResponseWriter, r *http.Request)         {}
 func (h apiHandler) handleReactToMessage(w http.ResponseWriter, r *http.Request)         {}
 func (h apiHandler) handleRemoveReactFromMessage(w http.ResponseWriter, r *http.Request) {}
