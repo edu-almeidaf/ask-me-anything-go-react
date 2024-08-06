@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import AmaLogo from '@/assets/ama-logo.svg'
+import { createRoom } from '@/http/create-room'
 
 export function CreateRoom() {
   const navigate = useNavigate()
@@ -15,9 +16,9 @@ export function CreateRoom() {
     }
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const { roomId } = await createRoom({ theme })
 
-      navigate('/room/1')
+      navigate(`/room/${roomId}`)
     } catch {
       toast.error('Falha ao criar a sala!')
     }
