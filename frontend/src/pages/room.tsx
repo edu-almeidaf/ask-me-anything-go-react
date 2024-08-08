@@ -2,6 +2,7 @@ import { Share2 } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 
 import AmaLogo from '@/assets/ama-logo.svg'
+import { CreateMessageForm } from '@/components/create-message-form'
 
 export function Room() {
   const { roomId } = useParams()
@@ -22,6 +23,8 @@ export function Room() {
       </div>
 
       <div className="h-px w-full bg-zinc-900" />
+
+      <CreateMessageForm />
     </div>
   )
 }
