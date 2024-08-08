@@ -1,8 +1,10 @@
 import { Share2 } from 'lucide-react'
+import { Suspense } from 'react'
 import { useParams } from 'react-router-dom'
 
 import AmaLogo from '@/assets/ama-logo.svg'
 import { CreateMessageForm } from '@/components/create-message-form'
+import { Messages } from '@/components/messages'
 
 export function Room() {
   const { roomId } = useParams()
@@ -25,6 +27,10 @@ export function Room() {
       <div className="h-px w-full bg-zinc-900" />
 
       <CreateMessageForm />
+
+      <Suspense fallback={<p>Carregando...</p>}>
+        <Messages />
+      </Suspense>
     </div>
   )
 }
